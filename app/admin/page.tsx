@@ -49,7 +49,7 @@ export default async function AdminPage() {
           <Link href="/dashboard" className="text-sm text-red-600 hover:underline">
             Back to dashboard
           </Link>
-        </header>
+        </div>
       </header>
       <div className="mx-auto max-w-2xl px-4 py-8">
         <AdminClient
