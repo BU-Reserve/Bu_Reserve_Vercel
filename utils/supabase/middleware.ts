@@ -8,8 +8,8 @@ export async function updateSession(request: NextRequest) {
     request: { headers: request.headers },
   });
 
-  // Protect dashboard: require session
-  if (request.nextUrl.pathname.startsWith("/dashboard")) {
+  // Protect dashboard and admin: require session
+  if (request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/admin")) {
     const token = request.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));

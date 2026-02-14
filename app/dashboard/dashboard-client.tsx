@@ -33,9 +33,10 @@ type Props = {
   rooms: Room[];
   myBooking: (Booking & { room?: Room }) | null;
   userEmail: string;
+  isAdmin?: boolean;
 };
 
-export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
+export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props) {
   const router = useRouter();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [start, setStart] = useState("09:00");
@@ -96,6 +97,14 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
           <h1 className="text-lg font-semibold text-neutral-900 dark:text-white">KHC Room Booking</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-600 dark:text-neutral-400">Hello, {userEmail}</span>
+            {isAdmin && (
+              <a
+                href="/admin"
+                className="text-sm text-red-600 hover:underline"
+              >
+                Admin
+              </a>
+            )}
             <form action={logout}>
               <button
                 type="submit"

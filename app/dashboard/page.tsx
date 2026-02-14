@@ -16,11 +16,15 @@ export default async function DashboardPage() {
     .gte("end_time", new Date().toISOString())
     .order("start_time", { ascending: true });
 
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const isAdmin = !!adminEmail && session.email.toLowerCase() === adminEmail;
+
   return (
     <DashboardClient
       rooms={rooms ?? []}
       myBooking={myBookings?.[0] ?? null}
       userEmail={session.email}
+      isAdmin={isAdmin}
     />
   );
 }
