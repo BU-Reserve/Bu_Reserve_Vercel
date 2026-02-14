@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getSession } from "@/lib/session";
+import { isAdminVerified } from "@/lib/admin-verified";
+import { setAdminVerifiedCookie } from "@/lib/admin-verified";
 import { revalidatePath } from "next/cache";
 
 function isAdmin(email: string): boolean {
@@ -9,9 +11,24 @@ function isAdmin(email: string): boolean {
   return !!adminEmail && email.toLowerCase() === adminEmail;
 }
 
-export async function addAllowedEmail(formData: FormData) {
+export async function verifyAdminPassword(formData: FormData) {
   const session = await getSession();
   if (!session || !isAdmin(session.email)) {
+    return { error: "Not authorized." };
+  }
+  const password = formData.get("password");
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!expected || typeof password !== "string" || password !== expected) {
+    return { error: "Wrong password." };
+  }
+  await setAdminVerifiedCookie(session.email);
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function addAllowedEmail(formData: FormData) {
+  const session = await getSession();
+  if (!session || !isAdmin(session.email) || !(await isAdminVerified(session.email))) {
     return { error: "Not authorized." };
   }
 
@@ -32,7 +49,7 @@ export async function addAllowedEmail(formData: FormData) {
 
 export async function removeAllowedEmail(emailToRemove: string) {
   const session = await getSession();
-  if (!session || !isAdmin(session.email)) {
+  if (!session || !isAdmin(session.email) || !(await isAdminVerified(session.email))) {
     return { error: "Not authorized." };
   }
 

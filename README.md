@@ -36,6 +36,8 @@ Create `.env.local` in the project root with:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` – anon public key (same page).
 - `SUPABASE_SERVICE_ROLE_KEY` – service role key (same page; keep secret, server-only).
 - `SESSION_SECRET` – a long random string for signing session cookies (e.g. generate with `openssl rand -base64 32`).
+- `ADMIN_EMAIL` – the email address that can access `/admin` (e.g. your own email).
+- `ADMIN_PASSWORD` – password required to open the admin area after logging in as the admin; stored in env only, not in the database.
 
 ### 3. Run locally
 
@@ -51,12 +53,16 @@ Open [http://localhost:3000](http://localhost:3000), click **Sign in to book**, 
 - Connect the repo to Vercel and add the same env vars (including `SUPABASE_SERVICE_ROLE_KEY` and `SESSION_SECRET`).
 - No Supabase redirect URLs are needed for login (sessions are cookie-based).
 
+## Admin
+
+Only the email set in `ADMIN_EMAIL` can open **/admin**. After logging in as that user, you must enter **ADMIN_PASSWORD** to access the admin area. Once verified, you can add or remove allowed emails (the verification lasts 1 hour). The admin email cannot be removed from the list from the UI. The **Admin** link appears in the dashboard header only when you are logged in as the admin.
+
 ## Room capacities
 
 Default in the migration:
 
-- **910**: 4  
-- **911**: 6  
-- **912**: 8  
+- **910**: 10  
+- **911**: 4  
+- **912**: 10  
 
 Edit the `insert` in the migration (or update rows in the `rooms` table) to change capacities.
