@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { Booking, Room } from "@/types/database";
 import { cancelBooking, createBooking, getAvailableRooms } from "@/app/dashboard/actions";
 import { logout } from "@/app/logout/actions";
@@ -94,6 +95,12 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
     <main className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <header className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+          <Image 
+            src="/bu_logo.jpg" 
+            alt="BU Logo" 
+            width={40} 
+            height={40}
+          />
           <h1 className="text-lg font-semibold text-neutral-900 dark:text-white">KHC Room Booking</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-600 dark:text-neutral-400">Hello, {userEmail}</span>
