@@ -104,14 +104,6 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
           <h1 className="text-lg font-semibold text-neutral-900 dark:text-white">KHC Room Booking</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-600 dark:text-neutral-400">Hello, {userEmail}</span>
-            {isAdmin && (
-              <a
-                href="/admin"
-                className="text-sm text-red-600 hover:underline"
-              >
-                Admin
-              </a>
-            )}
             <form action={logout}>
               <button
                 type="submit"
