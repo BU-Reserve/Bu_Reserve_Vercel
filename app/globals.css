@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
+/* Force light theme: dark mode only applies if .dark class is present (we never add it) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --accent: #b91c1c;
+  --accent-hover: #991b1b;
 }
 
 @theme inline {
@@ -12,15 +17,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  background: #ffffff;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }

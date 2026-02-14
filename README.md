@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KHC Room Booking
 
-## Getting Started
+Room booking for KHC: rooms **910**, **911**, and **912** (each with different capacity). Built with Next.js, Supabase, and Vercel.
 
-First, run the development server:
+## Rules
+
+- **Access**: Only emails listed in `allowed_emails` can sign in (no password, no email link—just enter your email).
+- **Advance**: Bookings allowed up to **7 days** in advance.
+- **Duration**: **1 or 2 hour** slots only.
+- **Limit**: **One booking at a time** per user.
+- **Room exclusivity**: When a room is booked for a time slot, no one else can book that same room for that time.
+- **Capacity**: Room capacity is shown only so the booker knows how many people the room holds; it does not limit who can book.
+- **Privacy**: Users can only see and cancel their own bookings, not others'.
+
+## Setup
+
+### 1. Supabase
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In **SQL Editor**, run the migrations in order:
+   - First: `supabase/migrations/20250214000000_initial_schema.sql`
+   - Second: `supabase/migrations/20250214000001_bookings_use_email.sql`
+3. Add allowed emails (replace with real addresses):
+
+   ```sql
+   insert into public.allowed_emails (email) values
+     ('user1@example.com'),
+     ('user2@example.com');
+   ```
+
+### 2. Environment
+
+Create `.env.local` in the project root with:
+
+- `NEXT_PUBLIC_SUPABASE_URL` – from Supabase **Project Settings → API** (Project URL).
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` – anon public key (same page).
+- `SUPABASE_SERVICE_ROLE_KEY` – service role key (same page; keep secret, server-only).
+- `SESSION_SECRET` – a long random string for signing session cookies (e.g. generate with `openssl rand -base64 32`).
+
+### 3. Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000), click **Sign in to book**, enter an allowed email, and you’re in—no link is sent.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Deploy on Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Connect the repo to Vercel and add the same env vars (including `SUPABASE_SERVICE_ROLE_KEY` and `SESSION_SECRET`).
+- No Supabase redirect URLs are needed for login (sessions are cookie-based).
 
-## Learn More
+## Room capacities
 
-To learn more about Next.js, take a look at the following resources:
+Default in the migration:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **910**: 4  
+- **911**: 6  
+- **912**: 8  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Edit the `insert` in the migration (or update rows in the `rooms` table) to change capacities.
