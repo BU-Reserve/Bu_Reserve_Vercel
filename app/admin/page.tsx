@@ -6,15 +6,9 @@ import Link from "next/link";
 import { AdminClient } from "./admin-client";
 import { AdminPasswordForm } from "./admin-password-form";
 
-function isAdmin(email: string): boolean {
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  return !!adminEmail && email.toLowerCase() === adminEmail;
-}
-
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!isAdmin(session.email)) redirect("/dashboard");
 
   const verified = await isAdminVerified(session.email);
   if (!verified) {
