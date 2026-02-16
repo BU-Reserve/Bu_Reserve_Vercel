@@ -70,8 +70,8 @@ export async function createBooking(formData: FormData) {
   }
 
   const now = new Date();
-  if (startTime < now) {
-    return { error: "Start time must be in the future." };
+  if (endTime <= now) {
+    return { error: "Booking must end in the future." };
   }
 
   const supabase = createAdminClient();
