@@ -8,7 +8,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const MAX_DAYS = 7;
-const DURATIONS = [1, 2] as const;
+
+function formatLocalDate(d: Date) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function getDateOptions() {
   const options: { value: string; label: string }[] = [];
@@ -17,7 +23,7 @@ function getDateOptions() {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     options.push({
-      value: d.toISOString().slice(0, 10),
+      value: formatLocalDate(d),
       label: i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
     });
   }
@@ -39,22 +45,21 @@ type Props = {
 
 export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props) {
   const router = useRouter();
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => formatLocalDate(new Date()));
   const [start, setStart] = useState("09:00");
   const [duration, setDuration] = useState<1 | 2>(1);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
-  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [roomsLoading, setRoomsLoading] = useState(true);
   const [bookingRoomId, setBookingRoomId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const tzOffset = new Date().getTimezoneOffset();
 
   const dateOptions = getDateOptions();
 
   useEffect(() => {
     let cancelled = false;
-    setRoomsLoading(true);
-    setError(null);
-    getAvailableRooms(date, start, duration).then(({ rooms: next }) => {
+    getAvailableRooms(date, start, duration, tzOffset).then(({ rooms: next }) => {
       if (!cancelled) {
         setAvailableRooms(next);
         setRoomsLoading(false);
@@ -63,7 +68,25 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
     return () => {
       cancelled = true;
     };
-  }, [date, start, duration]);
+  }, [date, start, duration, tzOffset]);
+
+  function handleDateChange(next: string) {
+    setDate(next);
+    setRoomsLoading(true);
+    setError(null);
+  }
+
+  function handleStartChange(next: string) {
+    setStart(next);
+    setRoomsLoading(true);
+    setError(null);
+  }
+
+  function handleDurationChange(next: 1 | 2) {
+    setDuration(next);
+    setRoomsLoading(true);
+    setError(null);
+  }
 
   async function handleBookRoom(roomId: string) {
     setBookingRoomId(roomId);
@@ -73,6 +96,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
     formData.set("date", date);
     formData.set("start", start);
     formData.set("duration", String(duration));
+    formData.set("tz_offset", String(tzOffset));
     const result = await createBooking(formData);
     setBookingRoomId(null);
     if (result?.error) {
@@ -161,7 +185,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Date</label>
                   <select
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(e) => handleDateChange(e.target.value)}
                     className="mt-1 rounded-lg border border-neutral-300 bg-white px-4 py-2 dark:border-neutral-600 dark:bg-neutral-800 dark:text-white"
                   >
                     {dateOptions.map((opt) => (
@@ -175,7 +199,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Start time</label>
                   <select
                     value={start}
-                    onChange={(e) => setStart(e.target.value)}
+                    onChange={(e) => handleStartChange(e.target.value)}
                     className="mt-1 rounded-lg border border-neutral-300 bg-white px-4 py-2 dark:border-neutral-600 dark:bg-neutral-800 dark:text-white"
                   >
                     {TIME_OPTIONS.map((opt) => (
@@ -189,7 +213,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Duration</label>
                   <select
                     value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value) as 1 | 2)}
+                    onChange={(e) => handleDurationChange(Number(e.target.value) as 1 | 2)}
                     className="mt-1 rounded-lg border border-neutral-300 bg-white px-4 py-2 dark:border-neutral-600 dark:bg-neutral-800 dark:text-white"
                   >
                     <option value={1}>1 hour</option>
