@@ -24,28 +24,27 @@ export async function createBooking(formData: FormData) {
   if (!roomId || !dateStr || !startStr || !SLOT_DURATIONS.includes(duration)) {
     return { error: "Missing or invalid fields." };
   }
+const [hours, minutes] = startStr.split(":").map(Number);
+const startTime = new Date(dateStr + "T" + startStr.padStart(5, "0") + ":00");
+const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 
-  const date = new Date(dateStr + "T00:00:00");
-  const [hours, minutes] = startStr.split(":").map(Number);
-  const startTime = new Date(date);
-  startTime.setHours(hours, minutes, 0, 0);
-  const endTime = new Date(startTime);
-  endTime.setHours(endTime.getHours() + duration, endTime.getMinutes(), 0, 0);
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const dateOnly = new Date(dateStr + "T00:00:00");
+const maxDate = addDays(today, MAX_DAYS_AHEAD);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const maxDate = addDays(today, MAX_DAYS_AHEAD);
-  if (date < today) {
-    return { error: "Cannot book in the past." };
-  }
-  if (date > maxDate) {
-    return { error: `Bookings are only allowed up to ${MAX_DAYS_AHEAD} days in advance.` };
-  }
+if (dateOnly < today) {
+  return { error: "Cannot book in the past." };
+}
+if (dateOnly > maxDate) {
+  return { error: `Bookings are only allowed up to ${MAX_DAYS_AHEAD} days in advance.` };
+}
 
-  const now = new Date();
-  if (startTime < now) {
-    return { error: "Start time must be in the future." };
-  }
+const now = new Date();
+if (startTime < now) {
+  return { error: "Start time must be in the future." };
+  
+}
 
   const supabase = createAdminClient();
   const { error } = await supabase.from("bookings").insert({
@@ -80,14 +79,11 @@ export async function cancelBooking(bookingId: string) {
 
 export async function getAvailableRooms(dateStr: string, startStr: string, duration: number) {
   const supabase = createAdminClient();
-  const date = new Date(dateStr + "T00:00:00");
-  const [hours, minutes] = startStr.split(":").map(Number);
-  const startTime = new Date(date);
-  startTime.setHours(hours, minutes, 0, 0);
-  const endTime = new Date(startTime);
-  endTime.setHours(endTime.getHours() + duration, endTime.getMinutes(), 0, 0);
+  const startTime = new Date(dateStr + "T" + startStr.padStart(5, "0") + ":00");
+  const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
   const startTs = startTime.toISOString();
   const endTs = endTime.toISOString();
+
 
   const { data: allRooms } = await supabase.from("rooms").select("*").order("name");
   if (!allRooms?.length) return { rooms: [] };
@@ -105,7 +101,7 @@ export async function getAvailableRooms(dateStr: string, startStr: string, durat
 
 export async function getAvailableSlots(roomId: string, dateStr: string) {
   const supabase = createAdminClient();
-  const date = new Date(dateStr + "T00:00:00");
+  const date = new Date(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const maxDate = addDays(today, MAX_DAYS_AHEAD);
