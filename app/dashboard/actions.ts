@@ -13,6 +13,29 @@ function addDays(d: Date, n: number): Date {
   return out;
 }
 
+function normalizeTzOffset(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) return 0;
+  if (parsed < -840 || parsed > 840) return 0;
+  return parsed;
+}
+
+function parseDateAndTimeAsUtc(dateStr: string, startStr: string, tzOffsetMinutes: number): Date | null {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hours, minutes] = startStr.split(":").map(Number);
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes)
+  ) {
+    return null;
+  }
+  const utcMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0) + tzOffsetMinutes * 60 * 1000;
+  return new Date(utcMs);
+}
+
 export async function createBooking(formData: FormData) {
   const session = await getSession();
   if (!session) return { error: "Not signed in." };
@@ -21,24 +44,28 @@ export async function createBooking(formData: FormData) {
   const dateStr = formData.get("date") as string;
   const startStr = formData.get("start") as string;
   const duration = Number(formData.get("duration")) as 1 | 2;
+  const tzOffsetMinutes = normalizeTzOffset(formData.get("tz_offset"));
   if (!roomId || !dateStr || !startStr || !SLOT_DURATIONS.includes(duration)) {
     return { error: "Missing or invalid fields." };
   }
 
-  const date = new Date(dateStr + "T00:00:00");
-  const [hours, minutes] = startStr.split(":").map(Number);
-  const startTime = new Date(date);
-  startTime.setHours(hours, minutes, 0, 0);
-  const endTime = new Date(startTime);
-  endTime.setHours(endTime.getHours() + duration, endTime.getMinutes(), 0, 0);
+  // Parse date in user's local timezone and convert to UTC for storage
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const startTime = parseDateAndTimeAsUtc(dateStr, startStr, tzOffsetMinutes);
+  if (!startTime) {
+    return { error: "Invalid date or time." };
+  }
+  const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const dateOnly = new Date(year, month - 1, day, 0, 0, 0, 0);
   const maxDate = addDays(today, MAX_DAYS_AHEAD);
-  if (date < today) {
+
+  if (dateOnly < today) {
     return { error: "Cannot book in the past." };
   }
-  if (date > maxDate) {
+  if (dateOnly > maxDate) {
     return { error: `Bookings are only allowed up to ${MAX_DAYS_AHEAD} days in advance.` };
   }
 
@@ -78,14 +105,13 @@ export async function cancelBooking(bookingId: string) {
   return { success: true };
 }
 
-export async function getAvailableRooms(dateStr: string, startStr: string, duration: number) {
+export async function getAvailableRooms(dateStr: string, startStr: string, duration: number, tzOffsetMinutesRaw?: number) {
   const supabase = createAdminClient();
-  const date = new Date(dateStr + "T00:00:00");
-  const [hours, minutes] = startStr.split(":").map(Number);
-  const startTime = new Date(date);
-  startTime.setHours(hours, minutes, 0, 0);
-  const endTime = new Date(startTime);
-  endTime.setHours(endTime.getHours() + duration, endTime.getMinutes(), 0, 0);
+  
+  const tzOffsetMinutes = normalizeTzOffset(tzOffsetMinutesRaw);
+  const startTime = parseDateAndTimeAsUtc(dateStr, startStr, tzOffsetMinutes);
+  if (!startTime) return { rooms: [] };
+  const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
   const startTs = startTime.toISOString();
   const endTs = endTime.toISOString();
 
@@ -105,7 +131,7 @@ export async function getAvailableRooms(dateStr: string, startStr: string, durat
 
 export async function getAvailableSlots(roomId: string, dateStr: string) {
   const supabase = createAdminClient();
-  const date = new Date(dateStr + "T00:00:00");
+  const date = new Date(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const maxDate = addDays(today, MAX_DAYS_AHEAD);
