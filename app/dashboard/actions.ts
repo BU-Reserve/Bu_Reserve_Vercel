@@ -24,27 +24,29 @@ export async function createBooking(formData: FormData) {
   if (!roomId || !dateStr || !startStr || !SLOT_DURATIONS.includes(duration)) {
     return { error: "Missing or invalid fields." };
   }
-const [hours, minutes] = startStr.split(":").map(Number);
-const startTime = new Date(dateStr + "T" + startStr.padStart(5, "0") + ":00");
-const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-const dateOnly = new Date(dateStr + "T00:00:00");
-const maxDate = addDays(today, MAX_DAYS_AHEAD);
+  // Parse date and time in local timezone
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hours, minutes] = startStr.split(':').map(Number);
+  const startTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 
-if (dateOnly < today) {
-  return { error: "Cannot book in the past." };
-}
-if (dateOnly > maxDate) {
-  return { error: `Bookings are only allowed up to ${MAX_DAYS_AHEAD} days in advance.` };
-}
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dateOnly = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const maxDate = addDays(today, MAX_DAYS_AHEAD);
 
-const now = new Date();
-if (startTime < now) {
-  return { error: "Start time must be in the future." };
-  
-}
+  if (dateOnly < today) {
+    return { error: "Cannot book in the past." };
+  }
+  if (dateOnly > maxDate) {
+    return { error: `Bookings are only allowed up to ${MAX_DAYS_AHEAD} days in advance.` };
+  }
+
+  const now = new Date();
+  if (startTime < now) {
+    return { error: "Start time must be in the future." };
+  }
 
   const supabase = createAdminClient();
   const { error } = await supabase.from("bookings").insert({
@@ -79,11 +81,14 @@ export async function cancelBooking(bookingId: string) {
 
 export async function getAvailableRooms(dateStr: string, startStr: string, duration: number) {
   const supabase = createAdminClient();
-  const startTime = new Date(dateStr + "T" + startStr.padStart(5, "0") + ":00");
+  
+  // Parse date and time in local timezone
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hours, minutes] = startStr.split(':').map(Number);
+  const startTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
   const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
   const startTs = startTime.toISOString();
   const endTs = endTime.toISOString();
-
 
   const { data: allRooms } = await supabase.from("rooms").select("*").order("name");
   if (!allRooms?.length) return { rooms: [] };
