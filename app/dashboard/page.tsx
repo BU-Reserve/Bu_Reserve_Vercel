@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getSession } from "@/lib/session";
+import { getUserRole, isAdminRole } from "@/lib/access";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./dashboard-client";
 
@@ -16,8 +17,8 @@ export default async function DashboardPage() {
     .gte("end_time", new Date().toISOString())
     .order("start_time", { ascending: true });
 
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const isAdmin = !!adminEmail && session.email.toLowerCase() === adminEmail;
+  const role = await getUserRole(session.email);
+  const isAdmin = isAdminRole(role);
 
   return (
     <DashboardClient

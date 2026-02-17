@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getSession } from "@/lib/session";
 import { isAdminVerified } from "@/lib/admin-verified";
+import { getUserRole, isAdminRole } from "@/lib/access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AdminClient } from "./admin-client";
@@ -9,6 +10,8 @@ import { AdminPasswordForm } from "./admin-password-form";
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect("/login");
+  const role = await getUserRole(session.email);
+  if (!isAdminRole(role)) redirect("/dashboard");
 
   const verified = await isAdminVerified(session.email);
   if (!verified) {
@@ -32,7 +35,7 @@ export default async function AdminPage() {
   const supabase = createAdminClient();
   const { data: allowedEmails } = await supabase
     .from("allowed_emails")
-    .select("email")
+    .select("email, role")
     .order("email");
 
   return (
@@ -47,8 +50,12 @@ export default async function AdminPage() {
       </header>
       <div className="mx-auto max-w-2xl px-4 py-8">
         <AdminClient
-          emails={(allowedEmails ?? []).map((r) => r.email)}
-          adminEmail={session.email}
+          entries={(allowedEmails ?? []).map((r) => ({
+            email: r.email,
+            role: r.role ?? "member",
+          }))}
+          currentUserEmail={session.email}
+          currentUserRole={role}
         />
       </div>
     </main>
