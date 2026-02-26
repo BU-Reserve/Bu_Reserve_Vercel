@@ -3,7 +3,11 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { setSession } from "@/lib/session";
-import { markDeviceTrusted } from "@/lib/device-trust";
+import {
+  createTrustedDeviceToken,
+  TRUSTED_DEVICE_COOKIE_NAME,
+  trustedDeviceCookieOptions,
+} from "@/lib/device-trust";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -49,6 +53,11 @@ export async function GET(request: Request) {
   }
 
   await setSession(email);
-  await markDeviceTrusted(email);
-  return NextResponse.redirect(`${url.origin}/dashboard`);
+  const response = NextResponse.redirect(`${url.origin}/dashboard`);
+  response.cookies.set(
+    TRUSTED_DEVICE_COOKIE_NAME,
+    await createTrustedDeviceToken(email),
+    trustedDeviceCookieOptions()
+  );
+  return response;
 }
