@@ -36,14 +36,17 @@ const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
   return { value: `${hour.toString().padStart(2, "0")}:00`, label };
 });
 
+function needsGroupConfirmation(room: Room): boolean {
+  return room.name === "910" || room.name === "912";
+}
+
 type Props = {
   rooms: Room[];
   myBooking: (Booking & { room?: Room }) | null;
   userEmail: string;
-  isAdmin?: boolean;
 };
 
-export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props) {
+export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
   const router = useRouter();
   const [date, setDate] = useState(() => formatLocalDate(new Date()));
   const [start, setStart] = useState("09:00");
@@ -51,6 +54,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [bookingRoomId, setBookingRoomId] = useState<string | null>(null);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const tzOffset = new Date().getTimezoneOffset();
@@ -97,6 +101,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
     formData.set("start", start);
     formData.set("duration", String(duration));
     formData.set("tz_offset", String(tzOffset));
+    formData.set("booking_confirmed", bookingConfirmed ? "yes" : "no");
     const result = await createBooking(formData);
     setBookingRoomId(null);
     if (result?.error) {
@@ -164,6 +169,9 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
             <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
               You can only have one booking at a time. Cancel this one to book another slot.
             </p>
+            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
+              If someone is in your room during your reservation time, kindly show them your reservation on the website.
+            </p>
           </section>
         ) : (
           <section className="mb-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
@@ -213,6 +221,15 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
                   </select>
                 </div>
               </div>
+              <label className="flex items-start gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={bookingConfirmed}
+                  onChange={(e) => setBookingConfirmed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-red-600 focus:ring-red-500"
+                />
+                <span>I confirm I am booking room 910/912 for a group.</span>
+              </label>
               <div>
                 <h3 className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-300">Available rooms</h3>
                 {roomsLoading ? (
@@ -233,7 +250,7 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
                         <button
                           type="button"
                           onClick={() => handleBookRoom(r.id)}
-                          disabled={bookingRoomId !== null}
+                          disabled={bookingRoomId !== null || (needsGroupConfirmation(r) && !bookingConfirmed)}
                           className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 dark:bg-red-500 dark:hover:bg-red-600"
                         >
                           {bookingRoomId === r.id ? "Booking…" : "Book"}
@@ -261,6 +278,18 @@ export function DashboardClient({ rooms, myBooking, userEmail, isAdmin }: Props)
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+            Click on link{" "}
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSehjkbrGa8JZqWs4_hDgCldju9R0DN6RgLCHouS2rJv8PjLFg/viewform?usp=publish-editor"
+              target="_blank"
+              rel="noreferrer"
+              className="text-red-600 underline hover:text-red-700 dark:text-red-400"
+            >
+              here
+            </a>{" "}
+            to report any problems.
+          </p>
         </section>
       </div>
     </main>
