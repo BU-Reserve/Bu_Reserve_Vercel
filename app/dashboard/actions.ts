@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 
 const MAX_DAYS_AHEAD = 7;
 const SLOT_DURATIONS = [1, 2] as const;
+const GROUP_CONFIRM_ROOMS = new Set(["910", "912"]);
 
 function addDays(d: Date, n: number): Date {
   const out = new Date(d);
@@ -51,9 +52,6 @@ export async function createBooking(formData: FormData) {
   if (!roomId || !dateStr || !startStr || !SLOT_DURATIONS.includes(duration)) {
     return { error: "Missing or invalid fields." };
   }
-  if (!bookingConfirmed) {
-    return { error: "Please confirm you are booking this room with a group." };
-  }
 
   // Parse date in user's local timezone and convert to UTC for storage
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -81,6 +79,18 @@ export async function createBooking(formData: FormData) {
   }
 
   const supabase = createAdminClient();
+  const { data: room } = await supabase
+    .from("rooms")
+    .select("name")
+    .eq("id", roomId)
+    .single();
+  if (!room) {
+    return { error: "Room not found." };
+  }
+  if (GROUP_CONFIRM_ROOMS.has(room.name) && !bookingConfirmed) {
+    return { error: "Please confirm group booking for room 910 or 912." };
+  }
+
   const { error } = await supabase.from("bookings").insert({
     email: session.email,
     room_id: roomId,
