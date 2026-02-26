@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${url.origin}/login?error=not_allowed`);
   }
 
-  await setSession(email);
+  //await setSession(email);
   await markDeviceTrusted(email);
   return NextResponse.redirect(`${url.origin}/dashboard`);
 }
