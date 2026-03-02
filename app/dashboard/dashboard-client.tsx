@@ -324,9 +324,6 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
                     {error}
                   </p>
                 )}
-                <div className="mt-5 text-sm text-[#66666d]">
-                  Pick a room below on mobile, or on the left on desktop.
-                </div>
               </div>
               <div className="order-2 lg:order-1">
                 <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-[#5f5f65]">Choose a room</h2>
