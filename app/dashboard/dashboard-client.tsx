@@ -45,7 +45,7 @@ function formatDateHeading(value: string) {
 function getRoomFeatures(roomName: string) {
   if (roomName === "910") return ["Whiteboard", "Power outlets", "Wi-Fi"];
   if (roomName === "911") return ["Monitor", "Power outlets", "Wi-Fi"];
-  if (roomName === "912") return ["Whiteboard", "Monitor", "Power outlets", "Wi-Fi", "Projector"];
+  if (roomName === "912") return ["Whiteboard", "Monitor", "Power outlets", "Wi-Fi"];
   return ["Power outlets", "Wi-Fi"];
 }
 
