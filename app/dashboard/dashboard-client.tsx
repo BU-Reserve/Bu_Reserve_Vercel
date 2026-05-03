@@ -44,18 +44,19 @@ function formatDateHeading(value: string) {
 
 function getRoomFeatures(roomName: string) {
   if (roomName === "910") return ["Whiteboard", "Power outlets", "Wi-Fi"];
-  if (roomName === "911") return ["Monitor", "Power outlets", "Wi-Fi"];
+  if (roomName === "911") return ["Whiteboard", "Monitor", "Power outlets", "Wi-Fi"];
   if (roomName === "912") return ["Whiteboard", "Monitor", "Power outlets", "Wi-Fi"];
   return ["Power outlets", "Wi-Fi"];
 }
 
 type Props = {
   rooms: Room[];
-  myBooking: (Booking & { room?: Room }) | null;
+  myBookings: (Booking & { room?: Room })[];
   userEmail: string;
+  canBookMultipleRooms: boolean;
 };
 
-export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
+export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleRooms }: Props) {
   const router = useRouter();
   const [date, setDate] = useState(() => formatLocalDate(new Date()));
   const [start, setStart] = useState("09:00");
@@ -64,7 +65,7 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [bookingRoomId, setBookingRoomId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelLoadingId, setCancelLoadingId] = useState<string | null>(null);
   const tzOffset = new Date().getTimezoneOffset();
 
   const dateOptions = getDateOptions();
@@ -126,16 +127,17 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
     router.refresh();
   }
 
-  async function handleCancel() {
-    if (!myBooking) return;
-    setCancelLoading(true);
-    const result = await cancelBooking(myBooking.id);
-    setCancelLoading(false);
+  async function handleCancel(bookingId: string) {
+    setCancelLoadingId(bookingId);
+    const result = await cancelBooking(bookingId);
+    setCancelLoadingId(null);
     if (result?.error) setError(result.error);
     else router.refresh();
   }
 
   const availableRoomIds = new Set(availableRooms.map((room) => room.id));
+  const bookingCount = myBookings.length;
+  const canShowBookingForm = canBookMultipleRooms || bookingCount === 0;
 
   return (
     <main className="min-h-screen bg-[#f5f5f5] text-[#1d1d1f]">
@@ -157,7 +159,7 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden rounded-full bg-[#f3dfdf] px-4 py-2 text-sm font-semibold text-[#bf1313] sm:block">
-              {myBooking ? "1 booking" : "0 bookings"}
+              {bookingCount} {bookingCount === 1 ? "booking" : "bookings"}
             </div>
             <span className="hidden text-sm text-[#606066] md:inline">{userEmail}</span>
             <form action={logout}>
@@ -187,14 +189,14 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
         <div className="mb-8 inline-flex rounded-2xl bg-[#e8e8e8] p-1">
           <div
             className={`rounded-xl px-6 py-2 text-base font-medium transition ${
-              myBooking ? "text-[#69696f]" : "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]"
+              canShowBookingForm ? "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]" : "text-[#69696f]"
             }`}
           >
             Book
           </div>
           <div
             className={`rounded-xl px-6 py-2 text-base font-medium transition ${
-              myBooking ? "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]" : "text-[#69696f]"
+              canShowBookingForm ? "text-[#69696f]" : "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]"
             }`}
           >
             My Bookings
@@ -243,37 +245,49 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
           </div>
         </div>
 
-        {myBooking ? (
+        {bookingCount > 0 && (
           <section className="mb-8 rounded-2xl border border-[#d6d6d7] bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold text-[#1d1d1f]">Your booking</h2>
-            <p className="text-base text-[#414148]">
-              <strong>Room {myBooking.room?.name ?? "—"}</strong> (capacity {myBooking.room?.capacity ?? "—"}) •{" "}
-              {new Date(myBooking.start_time).toLocaleString("en-GB", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}{" "}
-              –{" "}
-              {new Date(myBooking.end_time).toLocaleString("en-GB", { timeStyle: "short" })}
-            </p>
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={cancelLoading}
-              className="mt-5 rounded-xl bg-[#d40000] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#b80000] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {cancelLoading ? "Cancelling…" : "Cancel booking"}
-            </button>
-            <p className="mt-4 text-sm text-[#6a6a70]">
-              You can only have one booking at a time. Cancel this one to book another slot.
-            </p>
-            <p className="mt-1 text-sm text-[#6a6a70]">
-              Booking is disabled while this reservation is active.
-            </p>
+            <h2 className="mb-4 text-xl font-semibold text-[#1d1d1f]">Your {bookingCount === 1 ? "booking" : "bookings"}</h2>
+            <div className="space-y-4">
+              {myBookings.map((booking) => (
+                <div key={booking.id} className="rounded-xl border border-[#dddddf] bg-[#fafafa] p-4">
+                  <p className="text-base text-[#414148]">
+                    <strong>Room {booking.room?.name ?? "—"}</strong> (capacity {booking.room?.capacity ?? "—"}) •{" "}
+                    {new Date(booking.start_time).toLocaleString("en-GB", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}{" "}
+                    –{" "}
+                    {new Date(booking.end_time).toLocaleString("en-GB", { timeStyle: "short" })}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleCancel(booking.id)}
+                    disabled={cancelLoadingId !== null}
+                    className="mt-4 rounded-xl bg-[#d40000] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#b80000] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cancelLoadingId === booking.id ? "Cancelling…" : "Cancel booking"}
+                  </button>
+                </div>
+              ))}
+            </div>
+            {!canBookMultipleRooms && (
+              <>
+                <p className="mt-4 text-sm text-[#6a6a70]">
+                  You can only have one booking at a time. Cancel this one to book another slot.
+                </p>
+                <p className="mt-1 text-sm text-[#6a6a70]">
+                  Booking is disabled while this reservation is active.
+                </p>
+              </>
+            )}
             <p className="mt-2 text-sm text-[#47474d]">
               If someone is in your room during your reservation time, kindly show them your reservation on the website.
             </p>
           </section>
-        ) : (
+        )}
+
+        {canShowBookingForm && (
           <section className="mb-8 space-y-4">
             <div className="grid gap-8 lg:grid-cols-[1.05fr_1.35fr]">
               <div className="order-1 lg:order-2">
@@ -296,8 +310,7 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
                   Selected date: <span className="font-semibold text-[#2a2a2f]">{formatDateHeading(date)}</span>
                 </p>
                 <p className="mt-1 text-sm text-[#66666d]">
-                  Duration: <span className="font-semibold text-[#2a2a2f]">{duration} hour</span>
-                  {duration > 1 ? "s" : ""}
+                  Duration: <span className="font-semibold text-[#2a2a2f]">{duration} hour{duration > 1 ? "s" : ""}</span>
                 </p>
                 {error && (
                   <p className="mt-3 rounded-xl border border-[#f0cdcd] bg-[#fff5f5] px-4 py-2 text-sm text-[#bd2929]">
@@ -333,9 +346,6 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
                               <h3 className="text-2xl font-semibold leading-tight">Room {r.name}</h3>
                               <p className="mt-1 text-sm text-[#66666c]">9th Floor</p>
                             </div>
-                            <span className="rounded-full bg-[#efefef] px-3 py-1 text-xs font-semibold text-[#404046]">
-                              {r.capacity}
-                            </span>
                           </div>
                           <div className="mt-4 flex flex-wrap gap-2">
                             {getRoomFeatures(r.name).map((feature) => (
@@ -382,7 +392,7 @@ export function DashboardClient({ rooms, myBooking, userEmail }: Props) {
                 className="rounded-xl border border-[#dddddf] bg-[#fafafa] p-4"
               >
                 <span className="text-lg font-semibold text-[#202025]">Room {r.name}</span>
-                <p className="mt-1 text-sm text-[#66666c]">Capacity: {r.capacity} (for your reference)</p>
+                <p className="mt-1 text-sm text-[#66666c]">Capacity: {r.capacity}</p>
               </li>
             ))}
           </ul>

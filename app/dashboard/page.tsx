@@ -4,6 +4,8 @@ import { cleanupExpiredBookings } from "@/lib/booking-cleanup";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./dashboard-client";
 
+const MULTI_BOOKING_EMAILS = new Set(["diyavora@bu.edu"]);
+
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -21,8 +23,9 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       rooms={rooms ?? []}
-      myBooking={myBookings?.[0] ?? null}
+      myBookings={myBookings ?? []}
       userEmail={session.email}
+      canBookMultipleRooms={MULTI_BOOKING_EMAILS.has(session.email.toLowerCase())}
     />
   );
 }
