@@ -39,6 +39,20 @@ Create `.env.local` in the project root with:
 - `ADMIN_EMAIL` – the email address that can access `/admin` (e.g. your own email).
 - `ADMIN_PASSWORD` – password required to open the admin area after logging in as the admin; stored in env only, not in the database.
 
+### Local availability test data
+
+In local test mode (`DEV_AUTH_BYPASS=true` or missing Supabase keys), room availability uses seeded bookings so you can test the availability UI without a database.
+
+- **Today**
+   - Room 910: 10:00-12:00
+   - Room 911: 11:00-12:00
+   - Room 912: 14:00-16:00
+- **Tomorrow**
+   - Room 910: 09:00-10:00
+   - Room 911: 13:00-15:00
+
+This makes some rooms unavailable at specific times, so the dashboard's "available rooms" filtering can be validated locally. You can change these times/rooms easily in `local-test-mode.ts`
+
 ### 3. Run locally
 
 ```bash
@@ -46,7 +60,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), click **Sign in to book**, enter an allowed email, and you’re in—no link is sent.
+Open [http://localhost:3000](http://localhost:3000), click **Sign in to book**, enter an email, and you’re in—no link is sent.
 
 ### 4. Deploy on Vercel
 
