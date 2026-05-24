@@ -1,17 +1,15 @@
 import { SignJWT, jwtVerify } from "jose";
+import { getSessionSecret } from "@/lib/env";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "khc_session";
-const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "dev-secret-change-in-production"
-);
 
 export async function getSession(): Promise<{ email: string } | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSessionSecret());
     const email = payload.email as string;
     if (typeof email === "string" && email) return { email };
   } catch {
@@ -25,7 +23,7 @@ export async function setSession(email: string): Promise<void> {
   const token = await new SignJWT({ email: email.toLowerCase() })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
-    .sign(SECRET);
+    .sign(getSessionSecret());
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
