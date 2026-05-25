@@ -15,4 +15,16 @@ export type Booking = {
   room?: Room;
 };
 
+export type BookingHistory = {
+  id: string;
+  booking_id: string;
+  email: string;
+  room_id: string;
+  start_time: string;
+  end_time: string;
+  booked_at: string;
+  created_at: string;
+  room?: Room;
+};
+
 export type BookingDuration = 1 | 2;

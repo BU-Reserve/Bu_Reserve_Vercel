@@ -52,12 +52,25 @@ function getRoomFeatures(roomName: string) {
 type Props = {
   rooms: Room[];
   myBookings: (Booking & { room?: Room })[];
+  bookingHistoryCount: number;
   userEmail: string;
   canBookMultipleRooms: boolean;
 };
 
-export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleRooms }: Props) {
+export function DashboardClient({
+  rooms,
+  myBookings,
+  bookingHistoryCount,
+  userEmail,
+  canBookMultipleRooms,
+}: Props) {
   const router = useRouter();
+  const bookingCount = myBookings.length;
+  const roomsBookedCount = bookingHistoryCount || bookingCount;
+  const canShowBookingForm = canBookMultipleRooms || bookingCount === 0;
+  const [activeTab, setActiveTab] = useState<"book" | "bookings">(() =>
+    canShowBookingForm ? "book" : "bookings"
+  );
   const [date, setDate] = useState(() => formatLocalDate(new Date()));
   const [start, setStart] = useState("09:00");
   const [duration, setDuration] = useState<1 | 2>(1);
@@ -136,8 +149,7 @@ export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleR
   }
 
   const availableRoomIds = new Set(availableRooms.map((room) => room.id));
-  const bookingCount = myBookings.length;
-  const canShowBookingForm = canBookMultipleRooms || bookingCount === 0;
+  const selectedTab = !canShowBookingForm && activeTab === "book" ? "bookings" : activeTab;
 
   return (
     <main className="min-h-screen bg-[#f5f5f5] text-[#1d1d1f]">
@@ -159,7 +171,7 @@ export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleR
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden rounded-full bg-[#f3dfdf] px-4 py-2 text-sm font-semibold text-[#bf1313] sm:block">
-              {bookingCount} {bookingCount === 1 ? "booking" : "bookings"}
+              {bookingCount} active {bookingCount === 1 ? "booking" : "bookings"}
             </div>
             <span className="hidden text-sm text-[#606066] md:inline">{userEmail}</span>
             <form action={logout}>
@@ -187,22 +199,30 @@ export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleR
         </section>
 
         <div className="mb-8 inline-flex rounded-2xl bg-[#e8e8e8] p-1">
-          <div
+          <button
+            type="button"
+            onClick={() => {
+              if (canShowBookingForm) setActiveTab("book");
+            }}
+            disabled={!canShowBookingForm}
             className={`rounded-xl px-6 py-2 text-base font-medium transition ${
-              canShowBookingForm ? "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]" : "text-[#69696f]"
+              selectedTab === "book" ? "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]" : "text-[#69696f]"
             }`}
           >
             Book
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("bookings")}
             className={`rounded-xl px-6 py-2 text-base font-medium transition ${
-              canShowBookingForm ? "text-[#69696f]" : "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]"
+              selectedTab === "bookings" ? "bg-white text-[#1d1d1f] shadow-[0_1px_0_rgba(0,0,0,0.08)]" : "text-[#69696f]"
             }`}
           >
             My Bookings
-          </div>
+          </button>
         </div>
 
+        {selectedTab === "book" && (
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <label className="relative">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#66666b]">
@@ -244,50 +264,69 @@ export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleR
             </button>
           </div>
         </div>
+        )}
 
-        {bookingCount > 0 && (
+        {selectedTab === "bookings" && (
           <section className="mb-8 rounded-2xl border border-[#d6d6d7] bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold text-[#1d1d1f]">Your {bookingCount === 1 ? "booking" : "bookings"}</h2>
-            <div className="space-y-4">
-              {myBookings.map((booking) => (
-                <div key={booking.id} className="rounded-xl border border-[#dddddf] bg-[#fafafa] p-4">
-                  <p className="text-base text-[#414148]">
-                    <strong>Room {booking.room?.name ?? "—"}</strong> (capacity {booking.room?.capacity ?? "—"}) •{" "}
-                    {new Date(booking.start_time).toLocaleString("en-GB", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}{" "}
-                    –{" "}
-                    {new Date(booking.end_time).toLocaleString("en-GB", { timeStyle: "short" })}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleCancel(booking.id)}
-                    disabled={cancelLoadingId !== null}
-                    className="mt-4 rounded-xl bg-[#d40000] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#b80000] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {cancelLoadingId === booking.id ? "Cancelling…" : "Cancel booking"}
-                  </button>
-                </div>
-              ))}
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <h2 className="text-xl font-semibold text-[#1d1d1f]">My Bookings</h2>
+              <p className="rounded-full bg-[#f3dfdf] px-4 py-2 text-sm font-semibold text-[#bf1313]">
+                All bookings: {roomsBookedCount}
+              </p>
             </div>
-            {!canBookMultipleRooms && (
+
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-[#5f5f65]">Current bookings</h3>
+            {bookingCount > 0 ? (
+              <div className="space-y-4">
+                {myBookings.map((booking) => (
+                  <div key={booking.id} className="rounded-xl border border-[#dddddf] bg-[#fafafa] p-4">
+                    <p className="text-base text-[#414148]">
+                      <strong>Room {booking.room?.name ?? "—"}</strong> (capacity {booking.room?.capacity ?? "—"}) •{" "}
+                      {new Date(booking.start_time).toLocaleString("en-GB", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}{" "}
+                      –{" "}
+                      {new Date(booking.end_time).toLocaleString("en-GB", { timeStyle: "short" })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleCancel(booking.id)}
+                      disabled={cancelLoadingId !== null}
+                      className="mt-4 rounded-xl bg-[#d40000] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#b80000] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {cancelLoadingId === booking.id ? "Cancelling…" : "Cancel booking"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-[#dddddf] bg-[#fafafa] px-4 py-3 text-sm text-[#6a6a70]">
+                You do not have any active bookings right now.
+              </p>
+            )}
+
+            {bookingCount > 0 && (
               <>
-                <p className="mt-4 text-sm text-[#6a6a70]">
-                  You can only have one booking at a time. Cancel this one to book another slot.
-                </p>
-                <p className="mt-1 text-sm text-[#6a6a70]">
-                  Booking is disabled while this reservation is active.
+                {!canBookMultipleRooms && (
+                  <>
+                    <p className="mt-4 text-sm text-[#6a6a70]">
+                      You can only have one booking at a time. Cancel this one to book another slot.
+                    </p>
+                    <p className="mt-1 text-sm text-[#6a6a70]">
+                      Booking is disabled while this reservation is active.
+                    </p>
+                  </>
+                )}
+                <p className="mt-2 text-sm text-[#47474d]">
+                  If someone is in your room during your reservation time, kindly show them your reservation on the website.
                 </p>
               </>
             )}
-            <p className="mt-2 text-sm text-[#47474d]">
-              If someone is in your room during your reservation time, kindly show them your reservation on the website.
-            </p>
           </section>
         )}
 
-        {canShowBookingForm && (
+        {selectedTab === "book" && canShowBookingForm && (
           <section className="mb-8 space-y-4">
             <div className="grid gap-8 lg:grid-cols-[1.05fr_1.35fr]">
               <div className="order-1 lg:order-2">
@@ -342,10 +381,12 @@ export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleR
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h3 className="text-2xl font-semibold leading-tight">Room {r.name}</h3>
-                              <p className="mt-1 text-sm text-[#66666c]">9th Floor</p>
-                            </div>
+	                            <div>
+	                              <h3 className="text-2xl font-semibold leading-tight">Room {r.name}</h3>
+	                              <p className="mt-1 text-sm text-[#66666c]">
+	                                9th Floor • Capacity: {r.capacity}
+	                              </p>
+	                            </div>
                           </div>
                           <div className="mt-4 flex flex-wrap gap-2">
                             {getRoomFeatures(r.name).map((feature) => (
@@ -384,19 +425,7 @@ export function DashboardClient({ rooms, myBookings, userEmail, canBookMultipleR
         )}
 
         <section className="rounded-2xl border border-[#d6d6d8] bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-[#1d1d1f]">Rooms</h2>
-          <ul className="grid gap-4 sm:grid-cols-3">
-            {rooms.map((r) => (
-              <li
-                key={r.id}
-                className="rounded-xl border border-[#dddddf] bg-[#fafafa] p-4"
-              >
-                <span className="text-lg font-semibold text-[#202025]">Room {r.name}</span>
-                <p className="mt-1 text-sm text-[#66666c]">Capacity: {r.capacity}</p>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-sm text-[#4f4f56]">
+          <p className="text-sm text-[#4f4f56]">
             Click on link{" "}
             <a
               href="https://docs.google.com/forms/d/e/1FAIpQLSehjkbrGa8JZqWs4_hDgCldju9R0DN6RgLCHouS2rJv8PjLFg/viewform?usp=publish-editor"

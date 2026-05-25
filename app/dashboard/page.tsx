@@ -19,11 +19,16 @@ export default async function DashboardPage() {
     .eq("email", session.email)
     .gte("end_time", new Date().toISOString())
     .order("start_time", { ascending: true });
+  const { count: bookingHistoryCount } = await supabase
+    .from("booking_history")
+    .select("*", { count: "exact", head: true })
+    .eq("email", session.email);
 
   return (
     <DashboardClient
       rooms={rooms ?? []}
       myBookings={myBookings ?? []}
+      bookingHistoryCount={bookingHistoryCount ?? 0}
       userEmail={session.email}
       canBookMultipleRooms={MULTI_BOOKING_EMAILS.has(session.email.toLowerCase())}
     />
